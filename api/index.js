@@ -1,123 +1,69 @@
-
 const express = require("express");
 const app = express();
-const cors = require('cors');
-const bodyParser = require('body-parser');
+const cors = require("cors");
+const bodyParser = require("body-parser");
 const jsonParser = bodyParser.json();
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
 const saltRounds = 10;
-const jwt = require('jsonwebtoken');
-const secret = 'Fullstack-Login-2022'
+const jwt = require("jsonwebtoken");
+const secret = "Fullstack-Login-2022";
 const { MongoClient } = require("mongodb");
-const connectDB = require('../connection')
+const connectDB = require("../connection");
 
-connectDB()
-const uri = process.env.MONGODB_URI
-
-//srequire('dotenv').config();
-//const config = require('../config');
-
-
-
-// app.use((req, res, next) => {
-//   res.header('Access-Control-Allow-Origin', "*" )
-//   res.header('Access-Control-Allow-Methods','POST, GET, PUT, PATCH, DELETE, OPTIONS')
-//   res.header('Access-Control-Allow-Headers','Content-Type, Option, Authorization')
-//   return next()
-// })
-
-const allowCors = fn => async (req, res) => {
-  res.setHeader('Access-Control-Allow-Credentials', true)
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  // another common pattern
-  // res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT')
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  )
-  if (req.method === 'OPTIONS') {
-    res.status(200).end()
-    return
-  }
-  return await fn(req, res)
-}
-//app.use(allowCors)
+const uri = process.env.MONGODB_URI;
 
 app.use(cors());
-
-// app.use(cors({
-//   origin: "https://jsd-final-backend.vercel.app",
-//   credentials: true
-// }));
-
 app.use(express.json());
-
+connectDB();
 
 app.get("/", (req, res) => {
   res.send("Hello! Express");
 });
 
-
-//if (config.isVercel) {
-  // app.use(async (req, res, next) => {
-  //   await mongoose.connect(config.mongodbURI, config.mongodb);
-  //   return next();
-  // });
-//}
-
-app.post('/register', jsonParser, (req, res, next) => {
-  bcrypt.hash(req.body.password, saltRounds,async function(err, hash) {
-  const user = req.body
-  const client = new MongoClient(uri);
-  await client.connect();
-  await client.db("mydb").collection("users").insertOne({
-      email: user.email,
-      password: hash
-  })
-  await client.close()
-  res.status(200).send(user);
-  });
-})
-
-app.post('/login', jsonParser, async (req, res, next) => {
-    const user = req.body
+app.post("/register", jsonParser, (req, res, next) => {
+  bcrypt.hash(req.body.password, saltRounds, async function (err, hash) {
+    const user = req.body;
     const client = new MongoClient(uri);
     await client.connect();
-    const userLogin = await client.db("mydb").collection("users").findOne({ email : user.email })
-    bcrypt.compare(user.password, userLogin.password ,function(err, isLogin) {
-      if (isLogin) {
-        const token = jwt.sign({ email : user.email }, secret);
-        return res.json({status: "ok", message: "login success",token})
-      } else {
-        return res.json({status: "error", message: "login failed"})
-      }
+    await client.db("mydb").collection("users").insertOne({
+      email: user.email,
+      password: hash,
     });
-    await client.close()
-})
+    await client.close();
+    res.status(200).send(user);
+  });
+});
 
-app.post('/authen', jsonParser, async (req, res, next) => {
+app.post("/login", jsonParser, async (req, res, next) => {
+  const user = req.body;
+  const client = new MongoClient(uri);
+  await client.connect();
+  const userLogin = await client.db("mydb").collection("users").findOne({ email: user.email });
+  bcrypt.compare(user.password, userLogin.password, function (err, isLogin) {
+    if (isLogin) {
+      const token = jwt.sign({ email: user.email }, secret);
+      return res.json({ status: "ok", message: "login success", token });
+    } else {
+      return res.json({ status: "error", message: "login failed" });
+    }
+  });
+  await client.close();
+});
+
+app.post("/authen", jsonParser, async (req, res, next) => {
   try {
-    const token = req.headers.authorization.split(' ')[1]
-    const decoded =  jwt.verify(token, secret)
-    res.json({status: "ok", decoded})
-  } catch(err){
-    res.json({status: "error", message: err.message})
+    const token = req.headers.authorization.split(" ")[1];
+    const decoded = jwt.verify(token, secret);
+    res.json({ status: "ok", decoded });
+  } catch (err) {
+    res.json({ status: "error", message: err.message });
   }
-})
-
-// app.listen(port, () => {
-//   console.log("Starting server at port " + port);
-// });
+});
 
 app.get("/activity", async (req, res) => {
   const client = new MongoClient(uri);
   await client.connect();
-  const activities = await client
-    .db("mydb")
-    .collection("activities")
-    .find({})
-    .toArray();
+  const activities = await client.db("mydb").collection("activities").find({}).toArray();
   await client.close();
   res.status(200).send(activities);
 });
@@ -128,20 +74,29 @@ app.put("/activity/:id", async (req, res) => {
   const id = req.params.id;
   const client = new MongoClient(uri);
   await client.connect();
-  await client.db("mydb").collection("activities").updateOne({"id": id}, {"$set": {
-      id: id,
-      user: activity.user,
-      title: activity.title,
-      type: activity.type,
-      description: activity.description,
-      date: activity.date,
-      time: activity.time,
-      numberset: parseInt(activity.numberset),
-      calburned: parseInt(activity.calburned),
-      duration: parseInt(activity.duration),
-      heartrate: activity.heartrate
-  }},{upsert: true})
-  await client.close()
+  await client
+    .db("mydb")
+    .collection("activities")
+    .updateOne(
+      { id: id },
+      {
+        $set: {
+          id: id,
+          user: activity.user,
+          title: activity.title,
+          type: activity.type,
+          description: activity.description,
+          date: activity.date,
+          time: activity.time,
+          numberset: parseInt(activity.numberset),
+          calburned: parseInt(activity.calburned),
+          duration: parseInt(activity.duration),
+          heartrate: activity.heartrate,
+        },
+      },
+      { upsert: true }
+    );
+  await client.close();
   res.status(200).send(activity);
 });
 
@@ -159,63 +114,84 @@ app.delete("/activity/:id", async (req, res) => {
   }
 });
 
-app.get('/activity/run',async (req,res)=>{
+app.get("/activity/run", async (req, res) => {
   const client = new MongoClient(uri);
   await client.connect();
-  const run = await client.db("mydb").collection("activities").find({ type : "run" }).toArray()
-  await client.close()
+  const run = await client.db("mydb").collection("activities").find({ type: "run" }).toArray();
+  await client.close();
   res.status(200).send(run);
-})
+});
 
-app.get('/activity/walk',async (req,res)=>{
+app.get("/activity/walk", async (req, res) => {
   const client = new MongoClient(uri);
   await client.connect();
-  const walk = await client.db("mydb").collection("activities").find({ type : "walk" }).toArray()
-  await client.close()
+  const walk = await client.db("mydb").collection("activities").find({ type: "walk" }).toArray();
+  await client.close();
   res.status(200).send(walk);
-})
+});
 
-app.get('/activity/swimming',async (req,res)=>{
+app.get("/activity/swimming", async (req, res) => {
   const client = new MongoClient(uri);
   await client.connect();
-  const swimming = await client.db("mydb").collection("activities").find({ type : "swimming" }).toArray()
-  await client.close()
+  const swimming = await client
+    .db("mydb")
+    .collection("activities")
+    .find({ type: "swimming" })
+    .toArray();
+  await client.close();
   res.status(200).send(swimming);
-})
+});
 
-app.get('/activity/bicycleride',async (req,res)=>{
+app.get("/activity/bicycleride", async (req, res) => {
   const client = new MongoClient(uri);
   await client.connect();
-  const bicycleride = await client.db("mydb").collection("activities").find({ type : "bicycleride" }).toArray()
-  await client.close()
+  const bicycleride = await client
+    .db("mydb")
+    .collection("activities")
+    .find({ type: "bicycleride" })
+    .toArray();
+  await client.close();
   res.status(200).send(bicycleride);
-})
+});
 
-app.get('/activity/hiking',async (req,res)=>{
+app.get("/activity/hiking", async (req, res) => {
   const client = new MongoClient(uri);
   await client.connect();
-  const hiking = await client.db("mydb").collection("activities").find({ type : "hiking" }).toArray()
-  await client.close()
+  const hiking = await client
+    .db("mydb")
+    .collection("activities")
+    .find({ type: "hiking" })
+    .toArray();
+  await client.close();
   res.status(200).send(hiking);
-})
+});
 
 app.put("/profile", async (req, res) => {
   const profile = req.body;
-  const user = profile.nickname
+  const user = profile.nickname;
   // const id = req.params.id;
   const client = new MongoClient(uri);
   await client.connect();
-  await client.db("mydb").collection("profile").updateOne({"nickname": user}, {"$set": {
-    picUrl: profile.picUrl,
-    name: profile.name,
-    surname: profile.surname,
-    nickname: profile.nickname,
-    dateOfBirth: profile.dateOfBirth,
-    weight: parseInt(profile.weight),
-    height: parseInt(profile.height),
-    sex: profile.sex,
-  }},{upsert: true})
-  await client.close()
+  await client
+    .db("mydb")
+    .collection("profile")
+    .updateOne(
+      { nickname: user },
+      {
+        $set: {
+          picUrl: profile.picUrl,
+          name: profile.name,
+          surname: profile.surname,
+          nickname: profile.nickname,
+          dateOfBirth: profile.dateOfBirth,
+          weight: parseInt(profile.weight),
+          height: parseInt(profile.height),
+          sex: profile.sex,
+        },
+      },
+      { upsert: true }
+    );
+  await client.close();
   res.status(200).send(profile);
 });
 
