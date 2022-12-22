@@ -195,12 +195,4 @@ app.put("/profile", async (req, res) => {
   res.status(200).send(profile);
 });
 
-// app.get('/profile',async (req,res)=>{
-//   const client = new MongoClient(uri);
-//   await client.connect();
-//   const picprofile = await client.db("mydb").collection("profile").find({ type : "profilepic" }).toArray()
-//   await client.close()
-//   res.status(200).send(walk);
-// })
-
 module.exports = app;
