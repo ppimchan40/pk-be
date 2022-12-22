@@ -23,17 +23,18 @@ app.get("/", (req, res) => {
 });
 
 app.post("/register", jsonParser, (req, res, next) => {
-  bcrypt.hash(req.body.password, saltRounds, async function (err, hash) {
-    const user = req.body;
-    const client = new MongoClient(uri);
-    await client.connect();
-    await client.db("mydb").collection("users").insertOne({
-      email: user.email,
-      password: hash,
-    });
-    await client.close();
-    res.status(200).send(user);
-  });
+  // bcrypt.hash(req.body.password, saltRounds, async function (err, hash) {
+  //   const user = req.body;
+  //   const client = new MongoClient(uri);
+  //   await client.connect();
+  //   await client.db("mydb").collection("users").insertOne({
+  //     email: user.email,
+  //     password: hash,
+  //   });
+  //   await client.close();
+  //   res.status(200).send(user);
+  // });
+  res.send("register");
 });
 
 app.post("/login", jsonParser, async (req, res, next) => {
@@ -41,15 +42,16 @@ app.post("/login", jsonParser, async (req, res, next) => {
   const client = new MongoClient(uri);
   await client.connect();
   const userLogin = await client.db("mydb").collection("users").findOne({ email: user.email });
-  bcrypt.compare(user.password, userLogin.password, function (err, isLogin) {
-    if (isLogin) {
-      const token = jwt.sign({ email: user.email }, secret);
-      return res.json({ status: "ok", message: "login success", token });
-    } else {
-      return res.json({ status: "error", message: "login failed" });
-    }
-  });
-  await client.close();
+  // bcrypt.compare(user.password, userLogin.password, function (err, isLogin) {
+  //   if (isLogin) {
+  //     const token = jwt.sign({ email: user.email }, secret);
+  //     return res.json({ status: "ok", message: "login success", token });
+  //   } else {
+  //     return res.json({ status: "error", message: "login failed" });
+  //   }
+  // });
+  // await client.close();
+  res.send("Login");
 });
 
 app.post("/authen", jsonParser, async (req, res, next) => {
