@@ -5,7 +5,7 @@ const app = express();
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const jsonParser = bodyParser.json();
-const bcrypt = require("bcrypt-nodejs");
+const bcrypt = require("bcryptjs");
 const saltRounds = 10;
 const jwt = require("jsonwebtoken");
 const secret = "Fullstack-Login-2022";
@@ -22,7 +22,19 @@ app.get("/", (req, res) => {
   res.send("Hello! Express");
 });
 
-app.post("/register", jsonParser, (req, res, next) => {
+app.post("/register", jsonParser, async (req, res, next) => {
+  const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+
+  const user = req.body;
+  const client = new MongoClient(uri);
+  await client.connect();
+  await client.db("mydb").collection("users").insertOne({
+    email: user.email,
+    password: hashedPassword,
+  });
+  await client.close();
+  res.status(200).send(user);
+
   // bcrypt.hash(req.body.password, saltRounds, async function (err, hash) {
   //   const user = req.body;
   //   const client = new MongoClient(uri);
@@ -41,7 +53,16 @@ app.post("/login", jsonParser, async (req, res, next) => {
   const user = req.body;
   const client = new MongoClient(uri);
   await client.connect();
+
   const userLogin = await client.db("mydb").collection("users").findOne({ email: user.email });
+  const foundedUser = JSON.parse(JSON.stringify(userLogin));
+  const isCorrect = await bcrypt.compare(user.password, foundedUser.password);
+  console.log(isCorrect);
+  if (!isCorrect) return res.json({ status: "error", message: "login failed" });
+
+  const token = jwt.sign({ email: user.email }, secret);
+  await client.close();
+  return res.json({ status: "ok", message: "login success", token });
   // bcrypt.compare(user.password, userLogin.password, function (err, isLogin) {
   //   if (isLogin) {
   //     const token = jwt.sign({ email: user.email }, secret);
@@ -50,7 +71,7 @@ app.post("/login", jsonParser, async (req, res, next) => {
   //     return res.json({ status: "error", message: "login failed" });
   //   }
   // });
-  // await client.close();
+
   res.send("Login");
 });
 
