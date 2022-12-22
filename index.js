@@ -23,56 +23,43 @@ app.get("/", (req, res) => {
 });
 
 app.post("/register", jsonParser, async (req, res, next) => {
-  const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+  try {
+    const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
 
-  const user = req.body;
-  const client = new MongoClient(uri);
-  await client.connect();
-  await client.db("mydb").collection("users").insertOne({
-    email: user.email,
-    password: hashedPassword,
-  });
-  await client.close();
-  res.status(200).send(user);
+    const user = req.body;
+    const client = new MongoClient(uri);
+    await client.connect();
+    await client.db("mydb").collection("users").insertOne({
+      email: user.email,
+      password: hashedPassword,
+    });
+    await client.close();
+    res.status(200).send(user);
 
-  // bcrypt.hash(req.body.password, saltRounds, async function (err, hash) {
-  //   const user = req.body;
-  //   const client = new MongoClient(uri);
-  //   await client.connect();
-  //   await client.db("mydb").collection("users").insertOne({
-  //     email: user.email,
-  //     password: hash,
-  //   });
-  //   await client.close();
-  //   res.status(200).send(user);
-  // });
-  res.send("register");
+    res.send("register");
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.post("/login", jsonParser, async (req, res, next) => {
-  const user = req.body;
-  const client = new MongoClient(uri);
-  await client.connect();
+  try {
+    const user = req.body;
+    const client = new MongoClient(uri);
+    await client.connect();
 
-  const userLogin = await client.db("mydb").collection("users").findOne({ email: user.email });
-  const foundedUser = JSON.parse(JSON.stringify(userLogin));
-  const isCorrect = await bcrypt.compare(user.password, foundedUser.password);
-  console.log(isCorrect);
-  if (!isCorrect) return res.json({ status: "error", message: "login failed" });
+    const userLogin = await client.db("mydb").collection("users").findOne({ email: user.email });
+    const foundedUser = JSON.parse(JSON.stringify(userLogin));
+    const isCorrect = await bcrypt.compare(user.password, foundedUser.password);
+    console.log(isCorrect);
+    if (!isCorrect) return res.json({ status: "error", message: "login failed" });
 
-  const token = jwt.sign({ email: user.email }, secret);
-  await client.close();
-  return res.json({ status: "ok", message: "login success", token });
-  // bcrypt.compare(user.password, userLogin.password, function (err, isLogin) {
-  //   if (isLogin) {
-  //     const token = jwt.sign({ email: user.email }, secret);
-  //     return res.json({ status: "ok", message: "login success", token });
-  //   } else {
-  //     return res.json({ status: "error", message: "login failed" });
-  //   }
-  // });
-
-  res.send("Login");
+    const token = jwt.sign({ email: user.email }, secret);
+    await client.close();
+    return res.json({ status: "ok", message: "login success", token });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.post("/authen", jsonParser, async (req, res, next) => {
@@ -218,6 +205,10 @@ app.put("/profile", async (req, res) => {
     );
   await client.close();
   res.status(200).send(profile);
+});
+
+app.use((err, req, res, next) => {
+  res.status(500).send({ message: err.message });
 });
 
 app.listen(config.port, () => {
