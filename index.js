@@ -29,14 +29,12 @@ app.post("/register", jsonParser, async (req, res, next) => {
     const user = req.body;
     const client = new MongoClient(uri);
     await client.connect();
-    await client.db("mydb").collection("users").insertOne({
+    const newUser = await client.db("mydb").collection("users").insertOne({
       email: user.email,
       password: hashedPassword,
     });
     await client.close();
-    res.status(200).send(user);
-
-    res.send("register");
+    return res.status(200).send(newUser);
   } catch (error) {
     next(error);
   }
